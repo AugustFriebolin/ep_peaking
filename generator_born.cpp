@@ -3,6 +3,7 @@
 #include "TTree.h"
 #include "TVector3.h"
 #include "TRandom3.h"
+#include "TVectorT.h"
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -91,6 +92,14 @@ int main(int argc, char ** argv)
         }
     }
 
+  // Now that the generator settings have been established, write them out to a TVectorT
+  TVectorT<double> runInfo(4);
+  runInfo[0]=Nevents;
+  runInfo[1]=E1;
+  runInfo[2]=cosTheta_e_max;
+  runInfo[3]=cosTheta_e_min;
+  runInfo.Write();
+  
   // Set up a random number generator
   TRandom3 * myRand = new TRandom3(0); 
  
