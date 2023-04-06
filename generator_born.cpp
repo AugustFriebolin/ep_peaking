@@ -98,7 +98,7 @@ int main(int argc, char ** argv)
   runInfo[1]=E1;
   runInfo[2]=cosTheta_e_max;
   runInfo[3]=cosTheta_e_min;
-  runInfo.Write();
+  runInfo.Write("runInfo");
   
   // Set up a random number generator
   TRandom3 * myRand = new TRandom3(0); 
