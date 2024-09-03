@@ -1,4 +1,4 @@
-# - Find ROOT installation
+# - Find ROOT instalation
 # This module tries to find the ROOT installation on your system.
 # It tries to find the root-config script which gives you all the needed information.
 # If the system variable ROOTSYS is set this is straight forward.
@@ -43,27 +43,30 @@ IF (ROOT_CONFIG_EXECUTABLE)
    
   SET(ROOT_FOUND FALSE)
 
-  EXEC_PROGRAM(${ROOT_CONFIG_EXECUTABLE} ARGS "--version" OUTPUT_VARIABLE ROOTVERSION)
+  EXECUTE_PROCESS(COMMAND ${ROOT_CONFIG_EXECUTABLE} "--version" OUTPUT_VARIABLE ROOTVERSION )
 
   IF(NOT ROOT_FIND_QUIETLY)
     MESSAGE(STATUS "Looking for Root... - found $ENV{ROOTSYS}/bin/root")
     MESSAGE(STATUS "Looking for Root... - version ${ROOTVERSION} ")   
   ENDIF(NOT ROOT_FIND_QUIETLY)
 
-  # we need at least version 5.00/00
+  # We need to run with at least root 6
   IF (NOT ROOT_MIN_VERSION)
-    SET(ROOT_MIN_VERSION "5.00/00")
+    SET(ROOT_MIN_VERSION "6.00.00")
   ENDIF (NOT ROOT_MIN_VERSION)
-   
+
+  # Older versions of ROOT use the format 6.00/00. Newer versions use 6.00.00. Let's sanitize to the latter format.
+  STRING(REPLACE "/" "." ROOTVERSION "${ROOTVERSION}" )
+
   # now parse the parts of the user given version string into variables
-  STRING(REGEX REPLACE "^([0-9]+)\\.[0-9][0-9]+\\/[0-9][0-9]+" "\\1" req_root_major_vers "${ROOT_MIN_VERSION}")
-  STRING(REGEX REPLACE "^[0-9]+\\.([0-9][0-9])+\\/[0-9][0-9]+.*" "\\1" req_root_minor_vers "${ROOT_MIN_VERSION}")
-  STRING(REGEX REPLACE "^[0-9]+\\.[0-9][0-9]+\\/([0-9][0-9]+)" "\\1" req_root_patch_vers "${ROOT_MIN_VERSION}")
+  STRING(REGEX REPLACE "^([0-9]+)\\.[0-9][0-9]+\\.[0-9][0-9]+" "\\1" req_root_major_vers "${ROOT_MIN_VERSION}")
+  STRING(REGEX REPLACE "^[0-9]+\\.([0-9][0-9])+\\.[0-9][0-9]+.*" "\\1" req_root_minor_vers "${ROOT_MIN_VERSION}")
+  STRING(REGEX REPLACE "^[0-9]+\\.[0-9][0-9]+\\.([0-9][0-9]+)" "\\1" req_root_patch_vers "${ROOT_MIN_VERSION}")
    
   # and now the version string given by qmake
-  STRING(REGEX REPLACE "^([0-9]+)\\.[0-9][0-9]+\\/[0-9][0-9]+.*" "\\1" found_root_major_vers "${ROOTVERSION}")
-  STRING(REGEX REPLACE "^[0-9]+\\.([0-9][0-9])+\\/[0-9][0-9]+.*" "\\1" found_root_minor_vers "${ROOTVERSION}")
-  STRING(REGEX REPLACE "^[0-9]+\\.[0-9][0-9]+\\/([0-9][0-9]+).*" "\\1" found_root_patch_vers "${ROOTVERSION}")
+  STRING(REGEX REPLACE "^([0-9]+)\\.[0-9][0-9]+\\.[0-9][0-9]+.*" "\\1" found_root_major_vers "${ROOTVERSION}")
+  STRING(REGEX REPLACE "^[0-9]+\\.([0-9][0-9])+\\.[0-9][0-9]+.*" "\\1" found_root_minor_vers "${ROOTVERSION}")
+  STRING(REGEX REPLACE "^[0-9]+\\.[0-9][0-9]+\\.([0-9][0-9]+).*" "\\1" found_root_patch_vers "${ROOTVERSION}")
 
   SET(ROOTVERSION_SHORT "${found_root_major_vers}${found_root_minor_vers}")
 
@@ -74,7 +77,7 @@ IF (ROOT_CONFIG_EXECUTABLE)
   # compute an overall version number which can be compared at once
   MATH(EXPR req_vers "${req_root_major_vers}*10000 + ${req_root_minor_vers}*100 + ${req_root_patch_vers}")
   MATH(EXPR found_vers "${found_root_major_vers}*10000 + ${found_root_minor_vers}*100 + ${found_root_patch_vers}")
-   
+  
   IF (found_vers LESS req_vers)
     SET(ROOT_FOUND FALSE)
     SET(ROOT_INSTALLED_VERSION_TOO_OLD TRUE)
@@ -90,9 +93,7 @@ IF (ROOT_FOUND)
   # ask root-config for the library dir
   # Set ROOT_LIBRARY_DIR
 
-  EXEC_PROGRAM( ${ROOT_CONFIG_EXECUTABLE}
-    ARGS "--libdir"
-    OUTPUT_VARIABLE ROOT_LIBRARY_DIR_TMP )
+  EXECUTE_PROCESS(COMMAND ${ROOT_CONFIG_EXECUTABLE} "--libdir" OUTPUT_VARIABLE ROOT_LIBRARY_DIR_TMP OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   IF(EXISTS "${ROOT_LIBRARY_DIR_TMP}")
     SET(ROOT_LIBRARY_DIR ${ROOT_LIBRARY_DIR_TMP} )
@@ -102,31 +103,24 @@ IF (ROOT_FOUND)
   ENDIF(EXISTS "${ROOT_LIBRARY_DIR_TMP}")
 
   # ask root-config for the enables features
-  EXEC_PROGRAM(${ROOT_CONFIG_EXECUTABLE}
-    ARGS "--features"
-    OUTPUT_VARIABLE ROOT_FEATURES)
+  EXECUTE_PROCESS(COMMAND ${ROOT_CONFIG_EXECUTABLE} "--features" OUTPUT_VARIABLE ROOT_FEATURES OUTPUT_STRIP_TRAILING_WHITESPACE)
   SEPARATE_ARGUMENTS(ROOT_FEATURES)
     
   # ask root-config for the binary dir
-  EXEC_PROGRAM(${ROOT_CONFIG_EXECUTABLE}
-    ARGS "--bindir"
-    OUTPUT_VARIABLE ROOT_BINARY_DIR)
+  EXECUTE_PROCESS(COMMAND ${ROOT_CONFIG_EXECUTABLE} "--bindir" OUTPUT_VARIABLE ROOT_BINARY_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
   SEPARATE_ARGUMENTS(ROOT_BINARY_DIR)
 
   # ask root-config for the include dir
-  EXEC_PROGRAM( ${ROOT_CONFIG_EXECUTABLE}
-    ARGS "--incdir" 
-    OUTPUT_VARIABLE ROOT_INCLUDE_DIR)
+  EXECUTE_PROCESS( COMMAND ${ROOT_CONFIG_EXECUTABLE} "--incdir"  OUTPUT_VARIABLE ROOT_INCLUDE_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
   SEPARATE_ARGUMENTS(ROOT_INCLUDE_DIR)
       # CACHE INTERNAL "")
 
   # ask root-config for the library varaibles
-  EXEC_PROGRAM( ${ROOT_CONFIG_EXECUTABLE}
-    ARGS "--glibs" 
-    OUTPUT_VARIABLE ROOT_LIBRARIES)
+  EXECUTE_PROCESS(COMMAND  ${ROOT_CONFIG_EXECUTABLE} "--glibs" OUTPUT_VARIABLE ROOT_LIBRARIES OUTPUT_STRIP_TRAILING_WHITESPACE)
   SEPARATE_ARGUMENTS(ROOT_LIBRARIES)
 
-  LIST(APPEND ROOT_LIBRARIES -lEG -lThread -lSpectrum -lGeom -lXMLIO -lXMLParser -lTreePlayer -lGed -lMinuit)
+  #LIST(APPEND ROOT_LIBRARIES -lEG -lThread -lSpectrum -lGeom -lXMLIO -lXMLParser -lTreePlayer -lVMC -lRGL -lGed -lEve -lMinuit)
+  LIST(APPEND ROOT_LIBRARIES -lEG -lThread -lSpectrum -lGeom -lXMLIO -lXMLParser -lTreePlayer -lRGL -lGed -lEve -lMinuit)
 
   # Make variables changeble to the advanced user
   MARK_AS_ADVANCED( ROOT_LIBRARY_DIR ROOT_INCLUDE_DIR ROOT_DEFINITIONS)
@@ -271,6 +265,6 @@ MACRO (GENERATE_ROOT_TEST_SCRIPT SCRIPT_FULL_NAME)
                   )
   endif(CMAKE_SYSTEM MATCHES Darwin)
 
-  EXEC_PROGRAM(/bin/chmod ARGS "u+x  ${new_path}/${shell_script_name}")
+  EXECUTE_PROCESS(COMMAND /bin/chmod "u+x  ${new_path}/${shell_script_name}")
 
 ENDMACRO (GENERATE_ROOT_TEST_SCRIPT)
